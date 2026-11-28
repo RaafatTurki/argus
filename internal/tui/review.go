@@ -12,4 +12,6 @@ func (v *review) view(a *App, w, h int) []string {
 	return empty("Nothing to review", w, h)
 }
 
+func (v *review) typing() bool { return false }
+
 func (v *review) hints(a *App) string { return a.hints("help", "keys", "quit", "quit") }

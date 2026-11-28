@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/RaafatTurki/argus/internal/config"
 	"github.com/RaafatTurki/argus/internal/keys"
 	"github.com/RaafatTurki/argus/internal/tui"
 )
@@ -13,7 +14,7 @@ argus keys     print the key bindings
 `
 
 func main() {
-	km := keys.Load()
+	km, cfg := keys.Load(), config.Load()
 
 	cmd := ""
 	if len(os.Args) > 1 {
@@ -22,7 +23,7 @@ func main() {
 
 	switch cmd {
 	case "":
-		if err := tui.Run(km); err != nil {
+		if err := tui.Run(km, cfg); err != nil {
 			fmt.Fprintln(os.Stderr, "argus:", err)
 			os.Exit(1)
 		}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -12,24 +13,27 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/RaafatTurki/argus/internal/config"
 	"github.com/RaafatTurki/argus/internal/keys"
 )
 
 type tabID int
 
 var (
-	tabNames = [...]string{"Index", "Review"}
-	tabKeys  = [...]string{"view-index", "view-review"}
+	tabNames = [...]string{"Index", "Review", "Config"}
+	tabKeys  = [...]string{"view-index", "view-review", "view-config"}
 )
 
 type page interface {
 	update(a *App, msg tea.Msg) tea.Cmd
 	view(a *App, w, h int) []string
 	hints(a *App) string
+	typing() bool
 }
 
 type App struct {
 	keys *keys.Map
+	cfg  *config.Config
 
 	w, h   int
 	tab    tabID
@@ -47,8 +51,8 @@ type status struct {
 
 type expireMsg time.Time
 
-func Run(km *keys.Map) error {
-	a := &App{keys: km, pages: [...]page{&index{}, &review{}}}
+func Run(km *keys.Map, cfg *config.Config) error {
+	a := &App{keys: km, cfg: cfg, pages: [...]page{&index{}, &review{}, newConfigView()}}
 
 	p := tea.NewProgram(a, tea.WithAltScreen())
 
@@ -65,13 +69,17 @@ func Run(km *keys.Map) error {
 }
 
 func (a *App) Init() tea.Cmd {
-	if len(a.keys.Problems) > 0 {
-		return a.complain("%s", a.keys.Problems[0])
+	if problems := slices.Concat(a.keys.Problems, a.cfg.Problems); len(problems) > 0 {
+		return a.complain("%s", problems[0])
 	}
 	return nil
 }
 
 func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) { return a, a.update(msg) }
+
+func (a *App) say(format string, args ...any) tea.Cmd {
+	return a.show(status{text: fmt.Sprintf(format, args...), at: time.Now()})
+}
 
 func (a *App) complain(format string, args ...any) tea.Cmd {
 	return a.show(status{text: fmt.Sprintf(format, args...), bad: true, at: time.Now()})
@@ -129,13 +137,16 @@ func (a *App) update(msg tea.Msg) tea.Cmd {
 		return tea.Batch(cmds...)
 	}
 
+	p := a.page()
 	switch {
-	case a.is(key, "next-view"):
+	case a.is(key, "next-view") && !(p.typing() && key.String() != "tab"):
 		a.tab = (a.tab + 1) % tabID(len(tabNames))
 		return nil
-	case a.is(key, "prev-view"):
+	case a.is(key, "prev-view") && !(p.typing() && key.String() != "shift+tab"):
 		a.tab = (a.tab + tabID(len(tabNames)) - 1) % tabID(len(tabNames))
 		return nil
+	case p.typing():
+		return p.update(a, msg)
 	case a.is(key, "quit"):
 		return tea.Quit
 	case a.is(key, "help"):
@@ -149,7 +160,7 @@ func (a *App) update(msg tea.Msg) tea.Cmd {
 			return nil
 		}
 	}
-	return a.page().update(a, msg)
+	return p.update(a, msg)
 }
 
 func (a *App) updatePopups(msg tea.Msg) tea.Cmd {
@@ -253,7 +264,7 @@ func (a *App) tabBar() (header, rule string) {
 
 func (a *App) footer() string {
 	hints := " " + a.page().hints(a)
-	if len(a.popups) > 0 {
+	if len(a.popups) > 0 || !a.cfg.KeyHints {
 		hints = ""
 	}
 	if a.status.text == "" {

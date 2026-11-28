@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/RaafatTurki/argus/internal/config"
 )
 
 type Action struct {
@@ -22,9 +24,14 @@ var Actions = []Action{
 	{"prev-view", "Views", "Previous view", []string{"shift+tab", "left", "h"}},
 	{"view-index", "Views", "Go to Index", []string{"1"}},
 	{"view-review", "Views", "Go to Review", []string{"2"}},
+	{"view-config", "Views", "Go to Config", []string{"3"}},
+	{"confirm", "Everywhere", "Open / confirm", []string{"enter"}},
 	{"back", "Everywhere", "Close popup / clear", []string{"esc"}},
 	{"help", "Everywhere", "Show this help", []string{"?"}},
 	{"quit", "Everywhere", "Quit argus", []string{"q"}},
+	{"edit", "Config", "Edit the selected text setting", []string{"e"}},
+	{"editor", "Config", "Open config.toml in your editor", []string{"E"}},
+	{"reset", "Config", "Reset every setting to its default", []string{"d"}},
 }
 
 type Map struct {
@@ -32,10 +39,7 @@ type Map struct {
 	Problems []string
 }
 
-func Path() string {
-	dir, _ := os.UserConfigDir()
-	return filepath.Join(dir, "argus", "keys.conf")
-}
+func Path() string { return filepath.Join(config.Dir(), "keys.conf") }
 
 func Load() *Map {
 	m := &Map{bind: map[string][]string{}}

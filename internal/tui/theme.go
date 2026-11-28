@@ -18,6 +18,7 @@ var (
 	cBad    = color("#B3261E", "#FF7B72")
 	cDim    = color("#6B7280", "#7D8590")
 	cEdge   = color("#B8BCC8", "#3D4152")
+	cSel    = color("#E4E6F5", "#2A2D45")
 
 	sDim    = lipgloss.NewStyle().Foreground(cDim)
 	sAccent = lipgloss.NewStyle().Foreground(cAccent)
@@ -25,6 +26,7 @@ var (
 	sBad    = lipgloss.NewStyle().Foreground(cBad)
 	sBold   = lipgloss.NewStyle().Bold(true)
 	sEdge   = lipgloss.NewStyle().Foreground(cEdge)
+	sSel    = lipgloss.NewStyle().Background(cSel)
 )
 
 func width(s string) int { return ansi.StringWidth(s) }
@@ -58,4 +60,36 @@ func home(path string) string {
 		return "~" + strings.TrimPrefix(path, h)
 	}
 	return path
+}
+
+func wrap(text string, w int) []string {
+	w = max(w, 8)
+
+	var lines []string
+	for para := range strings.SplitSeq(text, "\n") {
+		line := ""
+		for _, word := range strings.Fields(para) {
+			switch {
+			case line == "":
+				line = word
+			case width(line)+1+width(word) <= w:
+				line += " " + word
+			default:
+				lines = append(lines, line)
+				line = word
+			}
+		}
+		lines = append(lines, line)
+	}
+	return lines
+}
+
+func windowRows(rows []string, sel, n int, off *int) []string {
+	if len(rows) <= n {
+		*off = 0
+		return rows
+	}
+	*off = min(max(*off, sel-n+1), max(0, sel-1))
+	*off = max(0, min(*off, len(rows)-n))
+	return rows[*off : *off+n]
 }
