@@ -44,6 +44,13 @@ var settings = []setting{
 	},
 
 	toggle("Show", "Key hints", "The line of keys at the bottom of the screen. ? still lists every key.", func(c *config.Config) *bool { return &c.KeyHints }),
+
+	{
+		group: "Model", label: "LLM server", text: true,
+		help: "The address of the local OpenAI-compatible server Argus prompts, such as llama-server. Empty uses http://localhost:8080.",
+		get:  func(c *config.Config) string { return c.LLMURL },
+		set:  func(c *config.Config, v string) { c.LLMURL = cmp.Or(strings.TrimSpace(v), config.Defaults().LLMURL) },
+	},
 }
 
 type configView struct {
@@ -175,7 +182,8 @@ func (v *configView) update(a *App, msg tea.Msg) tea.Cmd {
 }
 
 func (v *configView) view(a *App, w, h int) []string {
-	const labelW, valW = 22, 16
+	const labelW = 22
+	valW := max(1, w-labelW-2)
 
 	var rows []string
 	selRow, group := 0, ""
@@ -195,10 +203,10 @@ func (v *configView) view(a *App, w, h int) []string {
 		val := v.display(a, s)
 		switch {
 		case i == v.cur && v.editing:
-			v.input.Width = max(1, w-labelW-4)
+			v.input.Width = max(1, valW-1)
 			rows = append(rows, " "+sBold.Render(fit(s.label, labelW))+" "+v.input.View())
 		case i == v.cur:
-			rows = append(rows, sSel.Bold(true).Render(" "+fit(s.label, labelW)+" "+fit(val, valW))+sSel.Render(strings.Repeat(" ", max(0, w-labelW-valW-3))))
+			rows = append(rows, sSel.Bold(true).Render(" "+fit(s.label, labelW)+" "+fit(val, valW)))
 		default:
 			rows = append(rows, " "+sDim.Render(fit(s.label, labelW))+" "+fit(val, valW))
 		}

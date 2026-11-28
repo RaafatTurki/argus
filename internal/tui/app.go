@@ -75,7 +75,18 @@ func (a *App) Init() tea.Cmd {
 	return nil
 }
 
-func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) { return a, a.update(msg) }
+func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	key, ok := msg.(tea.KeyMsg)
+	if !ok || key.Type != tea.KeyRunes || len(key.Runes) < 2 || key.Paste {
+		return a, a.update(msg)
+	}
+
+	var cmds []tea.Cmd
+	for _, r := range key.Runes {
+		cmds = append(cmds, a.update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}, Alt: key.Alt}))
+	}
+	return a, tea.Batch(cmds...)
+}
 
 func (a *App) say(format string, args ...any) tea.Cmd {
 	return a.show(status{text: fmt.Sprintf(format, args...), at: time.Now()})
@@ -186,6 +197,9 @@ func (a *App) View() string {
 
 	bodyH := a.h - 3
 	lines := a.page().view(a, a.w, bodyH)
+	for i, l := range lines {
+		lines[i] = clip(l, a.w)
+	}
 	for len(lines) < bodyH {
 		lines = append(lines, "")
 	}

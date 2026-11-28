@@ -15,6 +15,7 @@ import (
 type Config struct {
 	Editor   string `toml:"editor"`
 	KeyHints bool   `toml:"key_hints"`
+	LLMURL   string `toml:"llm_url"`
 
 	Problems []string `toml:"-"`
 
@@ -22,7 +23,7 @@ type Config struct {
 }
 
 func Defaults() *Config {
-	return &Config{KeyHints: true}
+	return &Config{KeyHints: true, LLMURL: "http://localhost:8080"}
 }
 
 func Dir() string {
